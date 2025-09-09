@@ -1,0 +1,284 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manim 交互式演示</title>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script> -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"> -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.2/theme/monokai.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.2/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.2/mode/python/python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.2/addon/selection/active-line.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.2/addon/edit/matchbrackets.min.js"></script>
+
+  <style>
+    #code_editor{
+      /* height:100vh; */
+    }
+    .CodeMirror {
+        height: 100%;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .CodeMirror-linenumber {
+        padding: 0 8px 0 4px;
+    }
+    .CodeMirror-gutters {
+        background-color: #252526;
+        border-right: 1px solid #333;
+    }
+    @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+    body, html {width: 100%;margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    /* .container { display: flex; height: 100vh; width: 100%;}
+    .editor-panel, .video-panel { width: 50vw; padding: 10px; box-sizing: border-box; } */
+
+    body {
+            font-family: Arial, sans-serif;
+            /* margin: 0; */
+            padding: 20px;
+            background-color: #f0f0f0;
+     }
+    .container {
+      position: relative;
+      /* left:-8%; */
+      /* max-width: 100%; */
+      width:100%;
+      height:80%;
+      /* margin: 0 auto; */
+      display: flex;
+      /* grid-template-columns: 1fr 1fr; */
+      gap: 20px;
+      
+    }
+    .editor-panel, .video-panel {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    .editor-panel{width:40%;}
+    .video-panel {width:75%; border-right: 1px solid #ccc; }
+    .CodeMirror { height: calc(100% - 40px); font-size: 14px; }
+    h3 { margin-top: 0; }
+    #video { width: 100%; max-height: calc(100% - 40px); background: #000; }
+    #error { 
+      color: red; 
+      /* margin-top: 10px;  */
+      position:relative;
+      /* top:-100%; */
+      left:80%;
+    }
+    button{
+      height: 5%;
+      width:20%;
+      position:relative;
+      left:80%;
+      background-color: #0061fd; 
+      color: rgb(255, 0, 0);
+      font-size: 20px;
+      text-align: center;
+      border-radius: 50px; 
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease; 
+      outline: none; 
+    }
+    button:hover {
+      background-color: #3367d6; /* 深一点的蓝色 */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* 添加轻微阴影增强效果 */
+    }
+    button:active {
+      background-color: #2a56c6; /* 更深的蓝色 */
+      transform: translateY(3px); /* 轻微向下移动模拟按下 */
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2); /* 减小阴影 */
+    }
+
+    
+
+    #video-placeholder.loading {
+    display: inline-block;
+    position: relative;
+    padding-left: 25px;
+    }
+
+    #video-placeholder.loading::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        border-top-color: #3498db;
+        animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="editor-panel">
+      <h3>🧮 Manim Python 代码编辑器</h3>
+      <button onclick="runCode()">开始渲染</button>
+      <div id="error"></div>
+      <div class="h-[80vh] w-[100%]">
+        <div id="code-editor" class="w-full h-full"></div>   
+      </div>
+      
+    </div>
+    <div class="video-panel">
+      <h3>🎥 动画预览</h3>
+      <div style="height:5%;"></div>
+      <video id="video" controls style="display: block;height: 400px;"></video>
+      <p id="video-placeholder">运行代码后，动画将显示在这里...</p>
+    </div>
+  </div>
+
+  <script>
+    const editor = CodeMirror(document.getElementById('code-editor'), {
+      value: ``,
+      mode: "python",
+      theme: "monokai",
+      lineNumbers: true,
+      lineWrapping: false,  // 禁用自动换行，使内容可以横向滚动
+      styleActiveLine: true,
+      matchBrackets: true,
+      indentUnit: 4,
+      tabSize: 4,
+      smartIndent: true,
+      autofocus: true,
+      viewportMargin: Infinity  // 允许无限滚动
+  });
+
+    // 示例代码
+    editor.setValue(`# 画一个圆，然后移动它
+from manim import *
+
+class UserScene(Scene):
+  def construct(self):
+    circle = Circle(color=BLUE, radius=2)
+    self.play(Create(circle))
+    self.wait(1)
+    self.play(circle.animate.shift(RIGHT * 3))
+    self.wait(1)
+
+# 渲染场景
+scene = UserScene()
+scene.render()`);
+
+
+
+
+    async function run2(){
+      
+      
+      const code = editor.getValue();
+      const errorDiv = document.getElementById('error');
+      const video = document.getElementById('video');
+      const placeholder = document.getElementById('video-placeholder');
+
+      errorDiv.textContent = '';
+      // video.style.display = 'none';
+      placeholder.style.display = 'block';
+        try{
+          const res = await fetch('/run2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+            timeout: 60000  // 设置超时为60秒（可以根据需要调整）
+          });
+
+          const data = await res.json();
+          if (data.video_url) {
+            video.src = '/' + data.video_url;  // 注意：Flask 中 /videos/xxx.mp4 是静态文件夹
+            video.style.display = 'block';
+            placeholder.style.display = 'none';
+            video.load();
+          }
+        }catch (err) {
+          errorDiv.textContent = '❌ 请求失败: ' + err;
+        }
+      
+    }
+
+    
+
+    async function runCode() {
+      document.getElementById("video-placeholder").textContent = "正在渲染视频";
+      document.getElementById("video-placeholder").classList.add('loading');
+      
+      const code = editor.getValue();
+      const errorDiv = document.getElementById('error');
+      const video = document.getElementById('video');
+      const placeholder = document.getElementById('video-placeholder');
+
+      errorDiv.textContent = '';
+      // video.style.display = 'none';-
+      placeholder.style.display = 'block';
+
+      try {
+        const res = await fetch('/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+          timeout: 60000  // 设置超时为60秒（可以根据需要调整）
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          errorDiv.textContent = '❌ 错误: ' + data.error;
+          if (data.stderr) {
+            console.error(data.stderr);
+          }
+          return;
+        }
+
+        // if (data.video_url) {
+        //   video.src = '/' + data.video_url;  // 注意：Flask 中 /videos/xxx.mp4 是静态文件夹
+        //   video.style.display = 'block';
+        //   placeholder.style.display = 'none';
+        //   video.load();
+        // }
+      } catch (err) {
+        //errorDiv.textContent = '❌ 请求失败: ' + err;
+      }   
+      let id=setInterval(async () => {
+        try{
+          const res = await fetch('/requestt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+            timeout: 60000  // 设置超时为60秒（可以根据需要调整）
+          });
+
+          const data = await res.json();
+          
+          if (data.status==='completed') {
+            document.getElementById("video-placeholder").textContent = "运行代码后，动画将显示在这里...";
+            document.getElementById("video-placeholder").classList.remove('loading');
+            run2();
+            clearInterval(id);
+          }
+          else{
+            
+          }
+        }catch (err) {
+          // errorDiv.textContent = '❌ 请求失败: ' + err;
+        }
+    }, 5000);  // 每5秒检查一次
+    }
+  </script>
+</body>
+</html>
